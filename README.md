@@ -29,7 +29,7 @@ Briefly introduce the project, mentioning that it's a task management system cal
 
 ## PSS Class Implementation
 
-- Create a class named `PSS` to manage the task scheduling system.
+- Create a class named `PSSController` to manage the task scheduling system.
 - Implement methods for creating, viewing, editing, and deleting tasks.
 - Include methods for reading and writing schedules to files in JSON format.
 
