@@ -1,6 +1,6 @@
-from tasks.task import Task
+from task import Task, AntiTask, RecurringTask, TransientTask
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Schedule:
@@ -57,20 +57,36 @@ class Schedule:
             return False
 
     def add_task(self, task: Task) -> bool:
-        # TODO Check if task is valid
-        self.tasks.append(task)
-        return True
+        if self.is_allowed_entry(task):
+            self.tasks.append(task)
+            return True
+        return False
 
     def add_tasks(self, tasks: list[Task]) -> bool:
-        # TODO Check if tasks are valid
+        # Verify all tasks are valid
+        temp_schedule = Schedule()
         for task in tasks:
-            self.add_task(task)
+            if not temp_schedule.add_task(task):
+                return False
+
+        # Verify all tasks are allowed in current schedule
+        allowed = sum(self.is_allowed_entry(task) for task in temp_schedule.tasks)
+        is_allowed = allowed == len(temp_schedule.tasks)
+
+        if is_allowed:
+            for task in temp_schedule.tasks:
+                self.add_task(task)
+
         return True
 
     def edit_task(self, old_task: Task, new_task: Task) -> bool:
-        # TODO Check if new_task is valid
         if self.delete_task(old_task):
-            self.tasks.append(new_task)
+            if not self.add_task(new_task):
+                self.add_task(old_task)
+                return False
+        # Could not delete old task (Does not exist?)
+        else:
+            return False
         return True
 
     def get_task(self, task_name: str) -> Task:
@@ -133,15 +149,46 @@ class Schedule:
         return return_tasks
 
     def is_allowed_entry(self, new_task: Task) -> bool:
-        pass
+        new_task_start = Schedule.get_task_date(new_task)
+        new_task_end = Schedule.get_task_end_time(new_task)
+        for saved_task in self.tasks:
+            old_task_start = Schedule.get_task_date(saved_task)
+            old_task_end = Schedule.get_task_end_time(saved_task)
+            # Approved if new task ends before old task
+            if new_task_end <= old_task_start:
+                continue
+            # Approved if new task starts after old task ends
+            elif new_task_start >= old_task_end:
+                continue
+            else:
+                return False
+
+        return True
 
     def is_allowed_replace(self, old_task: Task, new_task: Task) -> bool:
-        pass
+        self.tasks.remove(old_task)
+        is_allowed = self.is_allowed_entry(new_task)
+        self.tasks.append(old_task)
+        return is_allowed
+
 
     @staticmethod
     def get_task_date(task: Task) -> datetime:
+        hour = int(task.get_start_time())
+        minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
             case ["Cancellation" | "Vist" | "Shopping" | "Appointment"]:
-                return datetime.fromisoformat(str(task.get_date()))
+                time = datetime.fromisoformat(f"{task.get_date()}T{hour}{minute}00")
             case _:
-                return datetime.fromisoformat(str(task.get_start_date()))
+                time = datetime.fromisoformat(f"{task.get_start_date()}T{hour}{minute}00")
+        return time
+
+    @staticmethod
+    def get_task_end_time(task: Task) -> datetime:
+        old_time = Schedule.get_task_date(task)
+        added_hours = int(task.get_duration())
+        added_minutes = int(task.get_duration() % 1.0 * 60)
+        time_change = timedelta(hours=added_hours, minutes=added_minutes)
+
+        return old_time + time_change
+
