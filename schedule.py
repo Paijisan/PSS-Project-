@@ -151,7 +151,11 @@ class Schedule:
     def is_allowed_entry(self, new_task: Task) -> bool:
         new_task_start = Schedule.get_task_date(new_task)
         new_task_end = Schedule.get_task_end_time(new_task)
-        for saved_task in self.tasks:
+        normal_tasks = (task for task in self.tasks if type(task) is TransientTask)
+        for saved_task in normal_tasks:
+            # Ignore anti tasks
+            if type(saved_task) is AntiTask:
+                continue
             old_task_start = Schedule.get_task_date(saved_task)
             old_task_end = Schedule.get_task_end_time(saved_task)
             # Approved if new task ends before old task
@@ -163,14 +167,62 @@ class Schedule:
             else:
                 return False
 
-        return True
+        # Check again but for recurred events
+        recurring_tasks: list[RecurringTask] = [task for task in self.tasks if type(task) is RecurringTask]
+        cancel_dates = [Schedule.get_task_date(task) for task in self.tasks if type(task) is AntiTask]
+        for old_task in recurring_tasks:
+            old_task_start = Schedule.get_task_date(old_task)
+            old_task_end = Schedule.get_last_recurrence_end_time(old_task)
+            # Ignore recurrences that end before new_task starts
+            if new_task_start > old_task_end:
+                continue
+            # Ignore recurrences that start after new_task ends
+            elif new_task_end < old_task_start:
+                continue
+            # new_task Does occur during recurrence span
+            else:
+                # Does recurrence happen on new_task day?
+                if 7 == old_task.get_frequency():  # Is it weekly?
+                    # Is it the same weekday?
+                    if not old_task_start.weekday() == new_task_start.weekday():
+                        continue
+                # Yes it occurs same day, is there time overlap?
+                old_task_today_start = new_task_start.replace(hour=old_task_start.hour, minute=old_task_start.minute)
+                old_task_today_end = new_task_start.replace(hour=old_task_end.hour, minute=old_task_end.minute)
+
+                # Ignore recurrence if it has been cancelled
+                if old_task_today_start in cancel_dates:
+                    continue
+
+                # New task starts before old_end AND after old_start start
+                is_start_overlap = new_task_start < old_task_today_end and new_task_start > old_task_start
+                # New task ends after old_task starts AND new task start before old_task ends
+                is_end_overlap = new_task_end > old_task_today_start and new_task_start < old_task_today_end
+                if is_start_overlap or is_end_overlap:
+                    # There is an overlap!
+                    if type(new_task) is AntiTask:
+                        # Allow perfect overlapping antitask
+                        if old_task_today_start == new_task_start and old_task_today_end == new_task_end:
+                            return True
+                        else:
+                            continue
+
+                    else:
+                        return False
+                    
+        # No overlap found!
+        # A non-overlapping AntiTask is not allowed
+        if type(new_task) is AntiTask:
+            return False
+        # All other tasks have no overlap is allowed
+        else:
+            return True
 
     def is_allowed_replace(self, old_task: Task, new_task: Task) -> bool:
         self.tasks.remove(old_task)
         is_allowed = self.is_allowed_entry(new_task)
         self.tasks.append(old_task)
         return is_allowed
-
 
     @staticmethod
     def get_task_date(task: Task) -> datetime:
@@ -186,9 +238,19 @@ class Schedule:
     @staticmethod
     def get_task_end_time(task: Task) -> datetime:
         old_time = Schedule.get_task_date(task)
+
         added_hours = int(task.get_duration())
         added_minutes = int(task.get_duration() % 1.0 * 60)
         time_change = timedelta(hours=added_hours, minutes=added_minutes)
-
         return old_time + time_change
+
+    @staticmethod
+    def get_last_recurrence_end_time(task: RecurringTask):
+        hour = int(task.get_start_time())
+        minute = int(task.get_start_time() % 1.0 * 60)
+        time = datetime.fromisoformat(f"{task.get_end_date()}T{hour}{minute}00")
+        added_hours = int(task.get_duration())
+        added_minutes = int(task.get_duration() % 1.0 * 60)
+        time_change = timedelta(hours=added_hours, minutes=added_minutes)
+        return time + time_change
 
