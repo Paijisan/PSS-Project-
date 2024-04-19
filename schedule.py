@@ -22,12 +22,11 @@ class Schedule:
         :param target_task: Task to be cancelled by an "anti task"
         :return: A Task of type AntiTask, TransientTask, or Recurring Task
         """
-
         match task_type:
-            case ["Cancellation"]:
+            case "Cancellation":
                 # Create Anti task here
                 return AntiTask(task_name, task_type, start_time, duration, start_date, target_task)
-            case ["Vist" | "Shopping" | "Appointment"]:
+            case "Vist" | "Shopping" | "Appointment":
                 # Create transient task here
                 return TransientTask(task_name, task_type, start_time, duration, start_date)
             case _:
@@ -43,9 +42,9 @@ class Schedule:
         :param json_string: Expecting singular dict {} in string format
         :return:
         """
-        j: dict = json.loads(json_string)
+        j: dict = json.loads(json_string.replace("'", '"'))
         # TODO Create reject code for bad json string
-        new_task: Task = Schedule.create_task(j["Name"], j["Type"], j["StartTime"], j["Duration"],
+        new_task: Task = Schedule.create_task(j["Name"], j["Type"], j["StartTime"], j["Duration"], j.get("StartDate", j.get("Date", None)),
                                               j.get("EndDate", None), j.get("Frequency", None))
         return new_task
 
@@ -110,7 +109,9 @@ class Schedule:
         try:
             with open(file_name, "r") as in_file:
                 j = json.load(in_file)
-                self.add_tasks(j)
+                for task in j:
+                    made_task = self.create_task_from_json(str(task))
+                    self.add_task(made_task)
             return True
         except FileNotFoundError:
             return False
@@ -229,10 +230,10 @@ class Schedule:
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
-            case ["Cancellation" | "Vist" | "Shopping" | "Appointment"]:
-                time = datetime.fromisoformat(f"{task.get_date()}T{hour}{minute}00")
+            case "Cancellation" | "Vist" | "Shopping" | "Appointment":
+                time = datetime.fromisoformat(f"{task.get_date()}T{hour:02d}{minute:02d}00")
             case _:
-                time = datetime.fromisoformat(f"{task.get_start_date()}T{hour}{minute}00")
+                time = datetime.fromisoformat(f"{task.get_start_date()}T{hour:02d}{minute:02d}00")
         return time
 
     @staticmethod
@@ -248,7 +249,7 @@ class Schedule:
     def get_last_recurrence_end_time(task: RecurringTask):
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
-        time = datetime.fromisoformat(f"{task.get_end_date()}T{hour}{minute}00")
+        time = datetime.fromisoformat(f"{task.get_end_date():06d}T{hour:02d}{minute:02d}00")
         added_hours = int(task.get_duration())
         added_minutes = int(task.get_duration() % 1.0 * 60)
         time_change = timedelta(hours=added_hours, minutes=added_minutes)
