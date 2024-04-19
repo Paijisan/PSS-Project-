@@ -196,7 +196,7 @@ class Schedule:
                     continue
 
                 # New task starts before old_end AND after old_start start
-                is_start_overlap = new_task_start < old_task_today_end and new_task_start > old_task_start
+                is_start_overlap = new_task_start < old_task_today_end and new_task_start > old_task_today_start
                 # New task ends after old_task starts AND new task start before old_task ends
                 is_end_overlap = new_task_end > old_task_today_start and new_task_start < old_task_today_end
                 if is_start_overlap or is_end_overlap:
