@@ -69,12 +69,16 @@ class Schedule:
                 return False
 
         # Verify all tasks are allowed in current schedule
-        allowed = sum(self.is_allowed_entry(task) for task in temp_schedule.tasks)
-        is_allowed = allowed == len(temp_schedule.tasks)
+        success = 0
+        for task in temp_schedule.tasks:
+            success += self.add_task(task)
 
-        if is_allowed:
+        # If a task fails to add, remove all other added tasks
+        if success != len(temp_schedule.tasks):
             for task in temp_schedule.tasks:
-                self.add_task(task)
+                if task in self.tasks:
+                    self.tasks.remove(task)
+            return False
 
         return True
 
@@ -109,9 +113,8 @@ class Schedule:
         try:
             with open(file_name, "r") as in_file:
                 j = json.load(in_file)
-                for task in j:
-                    made_task = self.create_task_from_json(str(task))
-                    self.add_task(made_task)
+                all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
+                self.add_tasks(all_tasks)
             return True
         except FileNotFoundError:
             return False
@@ -119,98 +122,65 @@ class Schedule:
     def get_day_tasks(self, date: int) -> list[Task]:
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
+        target_date = target_date.date()
+
         for task in self.tasks:
-            task_date = Schedule.get_task_date(task)
-            # TODO check for recurring
-            if target_date == task_date:
-                return_tasks.append(task)
+            for date_pair in get_date_times(task):
+                if target_date == date_pair[0].date():
+                    return_tasks.append(task)
+                    break
 
         return return_tasks
 
     def get_week_tasks(self, date: int) -> list[Task]:
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
+        target_year = target_date.year
         target_week = target_date.isocalendar().week
         for task in self.tasks:
-            task_date = Schedule.get_task_date(task)
-            # TODO check for recurring
-            if task_date.year == target_date.year and task_date.isocalendar().week == target_week:
-                return_tasks.append(task)
+            task_dates = get_date_times(task)
+            for task_date_pair in task_dates:
+                task_date = task_date_pair[0]
+                if task_date.year == target_year and task_date.isocalendar().week == target_week:
+                    return_tasks.append(task)
+                    break
         return return_tasks
 
     def get_month_tasks(self, date: int) -> list[Task]:
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
+        target_year = target_date.year
+        target_month = target_date.month
         for task in self.tasks:
-            task_date = Schedule.get_task_date(task)
-            # TODO check for recurring
-            if target_date.year == task_date.year and target_date.month == task_date.month:
-                return_tasks.append(task)
-
+            task_dates = get_date_times(task)
+            for task_date_pair in task_dates:
+                task_date = task_date_pair[0]
+                if task_date.year == target_year and task_date.month == target_month:
+                    return_tasks.append(task)
+                    break
         return return_tasks
 
     def is_allowed_entry(self, new_task: Task) -> bool:
-        new_task_start = Schedule.get_task_date(new_task)
-        new_task_end = Schedule.get_task_end_time(new_task)
-        normal_tasks = (task for task in self.tasks if type(task) is TransientTask)
-        for saved_task in normal_tasks:
-            # Ignore anti tasks
-            if type(saved_task) is AntiTask:
-                continue
-            old_task_start = Schedule.get_task_date(saved_task)
-            old_task_end = Schedule.get_task_end_time(saved_task)
-            # Approved if new task ends before old task
-            if new_task_end <= old_task_start:
-                continue
-            # Approved if new task starts after old task ends
-            elif new_task_start >= old_task_end:
-                continue
-            else:
-                return False
+        for task in self.tasks:
+            if has_overlap(new_task, task):
+                # AntiTask allowance case
+                if type(new_task) is AntiTask and type(task) is RecurringTask:
+                    perfect_fit = Schedule.is_anti_task_of_task(new_task, task)
+                    is_repeat = sum(1 for task in self.tasks if type(task) is AntiTask and anti_task_equality(new_task, task))
+                    return perfect_fit and not is_repeat
+                # If it is Transient or Recurring
+                new_task_overlaps, old_task_overlaps = get_task_overlaps(new_task, task)
+                # Check if old task has an anti task fitting every overlap
+                anti_task_count = 0
+                for old_task_time in old_task_overlaps:
+                    anti_tasks = (n for n in self.tasks if type(n) is AntiTask)
+                    for anti_task in anti_tasks:
+                        anti_task_time = Schedule.get_task_date(anti_task)
+                        if anti_task_time == old_task_time[0]:
+                            anti_task_count += 1
+                is_allowed = anti_task_count == len(old_task_overlaps)
+                return is_allowed
 
-        # Check again but for recurred events
-        recurring_tasks: list[RecurringTask] = [task for task in self.tasks if type(task) is RecurringTask]
-        cancel_dates = [Schedule.get_task_date(task) for task in self.tasks if type(task) is AntiTask]
-        for old_task in recurring_tasks:
-            old_task_start = Schedule.get_task_date(old_task)
-            old_task_end = Schedule.get_last_recurrence_end_time(old_task)
-            # Ignore recurrences that end before new_task starts
-            if new_task_start > old_task_end:
-                continue
-            # Ignore recurrences that start after new_task ends
-            elif new_task_end < old_task_start:
-                continue
-            # new_task Does occur during recurrence span
-            else:
-                # Does recurrence happen on new_task day?
-                if 7 == old_task.get_frequency():  # Is it weekly?
-                    # Is it the same weekday?
-                    if not old_task_start.weekday() == new_task_start.weekday():
-                        continue
-                # Yes it occurs same day, is there time overlap?
-                old_task_today_start = new_task_start.replace(hour=old_task_start.hour, minute=old_task_start.minute)
-                old_task_today_end = new_task_start.replace(hour=old_task_end.hour, minute=old_task_end.minute)
-
-                # Ignore recurrence if it has been cancelled
-                if old_task_today_start in cancel_dates:
-                    continue
-
-                # New task starts before old_end AND after old_start start
-                is_start_overlap = new_task_start < old_task_today_end and new_task_start > old_task_today_start
-                # New task ends after old_task starts AND new task start before old_task ends
-                is_end_overlap = new_task_end > old_task_today_start and new_task_start < old_task_today_end
-                if is_start_overlap or is_end_overlap:
-                    # There is an overlap!
-                    if type(new_task) is AntiTask:
-                        # Allow perfect overlapping antitask
-                        if old_task_today_start == new_task_start and old_task_today_end == new_task_end:
-                            return True
-                        else:
-                            continue
-
-                    else:
-                        return False
-                    
         # No overlap found!
         # A non-overlapping AntiTask is not allowed
         if type(new_task) is AntiTask:
@@ -218,6 +188,43 @@ class Schedule:
         # All other tasks have no overlap is allowed
         else:
             return True
+
+    def get_anti_tasks_of_same_day(self, task: Task) -> list:
+        """
+        Find anti tasks that occur on the same day as a TransientTask or RecurringTask
+        :param task: Must be TransientTask or RecurringTask
+        :return: List of AntiTasks that occur same day
+        """
+        task_list = []
+        if type(task) is TransientTask:
+            task.get_date()
+            anti_tasks = (_task for _task in self.tasks() if type(_task) is AntiTask)
+            for active_task in anti_tasks:
+                new_task_date = Schedule.get_task_date(task)
+                anti_task_date = Schedule.get_task_date(active_task)
+                if new_task_date.weekday() == anti_task_date.weekday():
+                   task_list.append(active_task)
+        else:
+            anti_tasks = (_task for _task in self.tasks if type(_task) is AntiTask)
+            for active_task in anti_tasks:
+                if Schedule.is_anti_task_of_task(active_task, task):
+                    task_list.append(active_task)
+
+        return task_list
+
+
+    @staticmethod
+    def is_anti_task_of_task(anti_task: AntiTask, task: RecurringTask):
+        if has_overlap(anti_task, task):
+            recur_task = task
+            anti_task_start = Schedule.get_task_date(anti_task)
+            anti_task_end = Schedule.get_task_end_time(anti_task)
+            recur_task_start = Schedule.get_task_date(recur_task)
+            recur_task_end = Schedule.get_last_recurrence_end_time(recur_task)
+            recur_task_same_day_start = anti_task_start.replace(hour=recur_task_start.hour, minute=recur_task_start.minute)
+            recur_task_same_day_end = anti_task_start.replace(hour=recur_task_end.hour, minute=recur_task_end.minute)
+            perfect_fit = anti_task_start == recur_task_same_day_start and anti_task_end == recur_task_same_day_end
+            return perfect_fit
 
     def is_allowed_replace(self, old_task: Task, new_task: Task) -> bool:
         self.tasks.remove(old_task)
@@ -255,3 +262,77 @@ class Schedule:
         time_change = timedelta(hours=added_hours, minutes=added_minutes)
         return time + time_change
 
+def anti_task_equality(task1: AntiTask, task2: AntiTask):
+    """
+    Check if the anti-tasks are the same
+    :param task1: AntiTask
+    :param task2: AntiTask
+    :return: True if AntiTask 1 and 2 are the same
+    """
+    return task1.get_duration() == task2.get_duration() and task1.get_name() == task2.get_name() and task1.get_start_time() == task2.get_start_time() and task1.get_date() ==  task2.get_date()
+
+def get_date_times(task) -> list[(datetime, datetime)]:
+    """
+    Returns list with tuple(start time datetime, end time datetime) for every day task occurs
+    :param task: Any type of task
+    :return: list[(datetime, datetime)]
+    """
+    all_dates = []
+    start = Schedule.get_task_date(task)
+    end = Schedule.get_task_end_time(task)
+    all_dates.append((start, end))
+    if not type(task) is RecurringTask:
+        return all_dates
+    task: RecurringTask = task
+    add_day = timedelta(days=task.get_frequency())
+    while end <= Schedule.get_last_recurrence_end_time(task):
+        start += add_day
+        end += add_day
+        all_dates.append((start, end))
+    return all_dates
+
+
+def is_datetime_pair_overlap(pair1, pair2) -> bool:
+    """
+    Checks if there is an overlap between one tuple(start datetime, end datetime) and another
+    :param pair1: tuple(start datetime, end datetime)
+    :param pair2: tuple(start datetime, end datetime)
+    :return: True if there is an overlap
+    """
+    return pair1[0] < pair2[1] and pair2[0] < pair1[1]
+
+
+def overlaps_of_datetimes(dates1: list[(datetime, datetime)], dates2: list[(datetime, datetime)]) -> tuple:
+    """
+    Returns a list of all start and end times of 2 list of start and end times
+    :param dates1: must be list[(start datetime, end datetime)]
+    :param dates2: must be list[(start datetime, end datetime)]
+    :return: tuple(dates1 list[(start datetime, end datetime)]), dates2 list[(start datetime, end datetime)]))
+    """
+    overlap1, overlap2 = [], []
+    for date1 in dates1:
+        for date2 in dates2:
+            if is_datetime_pair_overlap(date1, date2):
+                overlap1.append(date1)
+                overlap2.append(date2)
+    return overlap1, overlap2
+
+def get_task_overlaps(task1, task2):
+    """
+    Return tuple of 2 lists of start and end date times that overlap for each task
+    :param task1:
+    :param task2:
+    :return: tuple(dates1 list[(start datetime, end datetime)]), dates2 list[(start datetime, end datetime)]))
+    """
+    task1_dates = get_date_times(task1)
+    task2_dates = get_date_times(task2)
+    return overlaps_of_datetimes(task1_dates, task2_dates)
+
+def has_overlap(task1, task2):
+    """
+    True if there are any overlaps of time
+    :param task1: any task type
+    :param task2: any task type
+    :return: True if there are any overlaps of time
+    """
+    return len(get_task_overlaps(task1, task2)[0]) > 0
