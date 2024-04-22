@@ -43,83 +43,143 @@ class Schedule:
         :return:
         """
         j: dict = json.loads(json_string.replace("'", '"'))
-        # TODO Create reject code for bad json string
-        new_task: Task = Schedule.create_task(j["Name"], j["Type"], j["StartTime"], j["Duration"], j.get("StartDate", j.get("Date", None)),
+        try:
+            new_task: Task = Schedule.create_task(j["Name"], j["Type"], j["StartTime"], j["Duration"], j.get("StartDate", j.get("Date", None)),
                                               j.get("EndDate", None), j.get("Frequency", None))
+        except Exception:
+            raise InvalidJson()
         return new_task
 
     def delete_task(self, task: Task) -> bool:
-        try:
-            self.tasks.remove(task)
-            return True
-        except ValueError:
-            return False
+        """
+        Deletes task from schedule, may raise AntiTaskRemoveException
+        :param task: Task to delete
+        :return: True if delete is success
+        """
+        if task in self.tasks:
+            if type(task) is AntiTask:
+                overlapped_tasks = []
+                for stored_task in self.tasks:
+                    # Ignore self in list
+                    if not anti_task_equality(stored_task, task):
+                        # Check all overlaps
+                        if has_overlap(task, stored_task):
+                            overlapped_tasks.append(stored_task)
+
+                # Only 1 task should overlap anti-task, the RecurringTask it cancels
+                if len(overlapped_tasks) > 1:
+                    raise AntiTaskRemoveException(overlapped_tasks[0].get_name(), overlapped_tasks[1].get_name())
+            else:
+                self.tasks.remove(task)
+                return True
+        return False
 
     def add_task(self, task: Task) -> bool:
+        """
+        Adds task to schedule, raises Exceptions if task is not allowed
+        :param task: Task to add
+        :return: True if add successful
+        """
         if self.is_allowed_entry(task):
             self.tasks.append(task)
             return True
         return False
 
     def add_tasks(self, tasks: list[Task]) -> bool:
+        """
+        Adds a list of Tasks, raises Exception on first non-allowed task
+        Deletes all added task if 1 task in list fails
+        :param tasks:
+        :return:
+        """
         # Verify all tasks are valid
         temp_schedule = Schedule()
         for task in tasks:
             if not temp_schedule.add_task(task):
                 return False
-
-        # Verify all tasks are allowed in current schedule
         success = 0
-        for task in temp_schedule.tasks:
-            success += self.add_task(task)
-
-        # If a task fails to add, remove all other added tasks
-        if success != len(temp_schedule.tasks):
+        def remove_tasks():
+            """
+            Only removes tasks there was a single failure
+            """
+            if success != len(temp_schedule.tasks):
+                for task in temp_schedule.tasks:
+                    if task in self.tasks:
+                        self.tasks.remove(task)
+                return False
+            return True
+        try:
+            # Verify all tasks are allowed in current schedule
             for task in temp_schedule.tasks:
-                if task in self.tasks:
-                    self.tasks.remove(task)
-            return False
+                success += self.add_task(task)
+        except Exception as ex:
+            # If a task fails to add, remove all other added tasks before re-raising exception
+            remove_tasks()
+            raise ex
+        else:  # No exception occured
+            return remove_tasks()
 
         return True
 
     def edit_task(self, old_task: Task, new_task: Task) -> bool:
         if self.delete_task(old_task):
-            if not self.add_task(new_task):
+            try:
+                if not self.add_task(new_task):
+                    self.add_task(old_task)
+                    return False
+            except Exception as ex:
+                # Add back unedited task on failure
                 self.add_task(old_task)
-                return False
+                raise ex
+
         # Could not delete old task (Does not exist?)
         else:
             return False
         return True
 
     def get_task(self, task_name: str) -> Task:
+        """
+        Retrieve task by name
+        :param task_name: A tasks string name
+        :return: Task
+        """
         for task in self.tasks:
             if task.get_name() == task_name:
                 return task
 
     def write_file(self, file_name: str) -> bool:
+        """
+        Write to save file, may cause file write Exceptions
+        :param file_name: filename or full path
+        :return: True on success
+        """
         all_tasks: list = []
         for task in self.tasks:
             all_tasks.append(json.loads(task.to_json()))
 
-        try:
-            with open(file_name, "w") as out_file:
-                out_file.write(str(all_tasks))
-            return True
-        except FileExistsError:  # This might be unreachable
-            return False
+        with open(file_name, "w") as out_file:
+            out_file.write(str(all_tasks))
+        return True
 
     def read_file(self, file_name: str) -> bool:
-        try:
-            with open(file_name, "r") as in_file:
-                j = json.load(in_file)
-                all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
-                self.add_tasks(all_tasks)
-            return True
-        except FileNotFoundError:
-            return False
+        """
+        Adds given filename to schedule or raises error
+        :param file_name: filename or full path
+        :return: True on success
+        """
+
+        with open(file_name, "r") as in_file:
+            j = json.load(in_file)
+            all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
+            self.add_tasks(all_tasks)
+        return True
 
     def get_day_tasks(self, date: int) -> list[Task]:
+        """
+        Gets all Tasks for given date
+        :param date: iso format date of YYYYMMDD
+        :return: list[Task]
+        """
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
         target_date = target_date.date()
@@ -133,6 +193,11 @@ class Schedule:
         return return_tasks
 
     def get_week_tasks(self, date: int) -> list[Task]:
+        """
+        Gets all Tasks for given date
+        :param date: iso format date of YYYYMMDD
+        :return: list[Task]
+        """
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
         target_year = target_date.year
@@ -147,6 +212,11 @@ class Schedule:
         return return_tasks
 
     def get_month_tasks(self, date: int) -> list[Task]:
+        """
+        Gets all Tasks for given date
+        :param date: iso format date of YYYYMMDD
+        :return: list[Task]
+        """
         return_tasks: list = []
         target_date = datetime.fromisoformat(str(date))
         target_year = target_date.year
@@ -160,7 +230,26 @@ class Schedule:
                     break
         return return_tasks
 
+    def is_name_unique(self, task: Task) -> bool:
+        """
+        Bool to test if Task name is unique
+        :param task: Task to test
+        :return: True if name is unique
+        """
+        for old_task in self.tasks:
+            if task.get_name() == old_task.get_name():
+                return False
+        return True
+
     def is_allowed_entry(self, new_task: Task) -> bool:
+        """
+        Will return true if task is allowed, false or Raise Exception if not allowed
+        :param new_task: Task to test
+        :return: True for allowed, Exception may occur on not allowed
+        """
+        if not self.is_name_unique(new_task):
+            raise TaskNameNotUniqueException(new_task.get_name())
+
         for task in self.tasks:
             if has_overlap(new_task, task):
                 # AntiTask allowance case
@@ -179,11 +268,15 @@ class Schedule:
                         if anti_task_time == old_task_time[0]:
                             anti_task_count += 1
                 is_allowed = anti_task_count == len(old_task_overlaps)
-                return is_allowed
+                if is_allowed:
+                    return True
+                else:
+                    raise TaskOverlapException(new_task.get_name())
 
         # No overlap found!
         # A non-overlapping AntiTask is not allowed
         if type(new_task) is AntiTask:
+            raise InvalidTaskException()
             return False
         # All other tasks have no overlap is allowed
         else:
@@ -198,7 +291,7 @@ class Schedule:
         task_list = []
         if type(task) is TransientTask:
             task.get_date()
-            anti_tasks = (_task for _task in self.tasks() if type(_task) is AntiTask)
+            anti_tasks = (_task for _task in self.tasks if type(_task) is AntiTask)
             for active_task in anti_tasks:
                 new_task_date = Schedule.get_task_date(task)
                 anti_task_date = Schedule.get_task_date(active_task)
@@ -214,7 +307,13 @@ class Schedule:
 
 
     @staticmethod
-    def is_anti_task_of_task(anti_task: AntiTask, task: RecurringTask):
+    def is_anti_task_of_task(anti_task: AntiTask, task: RecurringTask) -> bool:
+        """
+        Check if anti task belongs to Recurring Task
+        :param anti_task: AntiTask
+        :param task: RecurringTask
+        :return: True if AntiTask belongs to RecurringTask
+        """
         if has_overlap(anti_task, task):
             recur_task = task
             anti_task_start = Schedule.get_task_date(anti_task)
@@ -227,13 +326,30 @@ class Schedule:
             return perfect_fit
 
     def is_allowed_replace(self, old_task: Task, new_task: Task) -> bool:
-        self.tasks.remove(old_task)
-        is_allowed = self.is_allowed_entry(new_task)
-        self.tasks.append(old_task)
+        """
+        Check if task is allowed to replace another task, raises exception on failure
+        :param old_task: Task currently in schedule
+        :param new_task: Task replacing old task in schedule
+        :return: True if new Task can replace old task
+        """
+        if old_task in self.tasks:
+            self.tasks.remove(old_task)
+            try:
+                is_allowed = self.is_allowed_entry(new_task)
+            except Exception as ex:
+                # Add back old task on failure
+                self.tasks.append(old_task)
+                raise ex
+            self.tasks.append(old_task)
         return is_allowed
 
     @staticmethod
     def get_task_date(task: Task) -> datetime:
+        """
+        Gets date no matter the task type, with task time attached
+        :param task: Task
+        :return: datetime of with hour and minute of first occurence of Task
+        """
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
@@ -245,6 +361,11 @@ class Schedule:
 
     @staticmethod
     def get_task_end_time(task: Task) -> datetime:
+        """
+        Get datetime with hour and minute at the end of a task
+        :param task: Task
+        :return: datetime with hours and minute of end of task
+        """
         old_time = Schedule.get_task_date(task)
 
         added_hours = int(task.get_duration())
@@ -253,7 +374,12 @@ class Schedule:
         return old_time + time_change
 
     @staticmethod
-    def get_last_recurrence_end_time(task: RecurringTask):
+    def get_last_recurrence_end_time(task: RecurringTask) -> datetime:
+        """
+        Gets datetime of the last date in RecurringTask with end time
+        :param task: RecurringTask
+        :return: datetime of end time of RecurringTask
+        """
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         time = datetime.fromisoformat(f"{task.get_end_date():06d}T{hour:02d}{minute:02d}00")
@@ -328,6 +454,7 @@ def get_task_overlaps(task1, task2):
     task2_dates = get_date_times(task2)
     return overlaps_of_datetimes(task1_dates, task2_dates)
 
+
 def has_overlap(task1, task2):
     """
     True if there are any overlaps of time
@@ -336,3 +463,59 @@ def has_overlap(task1, task2):
     :return: True if there are any overlaps of time
     """
     return len(get_task_overlaps(task1, task2)[0]) > 0
+
+
+class TaskNameNotUniqueException(Exception):
+    """
+    Task name already exists in schedule, "CS3560-L15-The-Project (1).pdf" page 15
+    """
+    def __init__(self, name, *args):
+        super().__init__(args)
+        self.name = name
+
+    def __str__(self):
+        return f"Task {self.name} already exists, choose a unique name"
+
+
+class AntiTaskRemoveException(Exception):
+    """
+    Removal of AntiTask would cause conflict in overlapping Tasks, "CS3560-L15-The-Project (1).pdf" page 17
+    """
+    def __init__(self, name1, name2, *args):
+        super().__init__(args)
+        self.name1 = name1
+        self.name2 = name2
+
+    def __str__(self):
+        return f"AntiTask removal error, Task:{self.name1} and Task:{self.name2} rely on AntiTask"
+
+
+class TaskOverlapException(Exception):
+    def __init__(self, name, *args):
+        super().__init__(args)
+        self.name = name
+
+    def __str__(self):
+        return f"Can not add task, overlap with task {self.name}"
+
+
+class InvalidTaskException(Exception):
+    """
+    Task does not have valid fields
+    """
+    def __init__(self, *args):
+        super().__init__(args)
+
+    def __str__(self):
+        return f"Invalid task provided"
+
+
+class InvalidJson(Exception):
+    """
+    Saved file is invalid, "CS3560-L15-The-Project (1).pdf" page 20
+    """
+    def __init__(self, *args):
+        super().__init__(args)
+
+    def __str__(self):
+        return f"JSON save file has invalid syntax"
