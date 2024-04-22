@@ -100,7 +100,8 @@ class PSSController:
         else:
             print("Failed to add task.")   
 
-    def find_task
+    def find_task()
+
             
 
     def display_day(self, date: int): 
