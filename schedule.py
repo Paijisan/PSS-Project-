@@ -491,6 +491,9 @@ class AntiTaskRemoveException(Exception):
 
 
 class TaskOverlapException(Exception):
+    """
+    Newly requested Task overlaps with older task
+    """
     def __init__(self, name, *args):
         super().__init__(args)
         self.name = name
