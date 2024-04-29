@@ -71,9 +71,10 @@ class PSSController:
                 return True ##if task with the given task name is found, true is returned
         return False
 
+
     def add_task(self) -> None:
         ##Function to add a new task
-        ##prompt user to input deatils for a new task
+        ##prompt user to input details for a new task
         print("Now adding a new task")
         task_name = input("Enter a task name: ")
         task_type = input("Enter task type: ")
@@ -84,12 +85,12 @@ class PSSController:
         frequency = int(input("Enter the frequency of the task (optional): "))
         target_task_name = input("Enter name for target task (optional): ")
 
-         try:
-            start_time = float(start_time_str)
-            duration = float(duration_str)
-            start_date = int(start_date_str)
-            end_date = int(end_date_str) if end_date_str else None
-            frequency = int(frequency_str) if frequency_str else None
+        try:
+            start_time = float(start_time)
+            duration = float(duration)
+            start_date = int(start_date)
+            end_date = int(end_date) if end_date else None
+            frequency = int(frequency) if frequency else None
         except ValueError as ve:
             print(f"Error converting input to appropriate data types: {ve}")
             return
@@ -108,6 +109,7 @@ class PSSController:
                 print(f"An error occurred while adding task to the schedule: {e}")
         else:
             print("Failed to create task.")
+
 
     def display_day(self) -> None:
         ##Function to display tasks for a day
@@ -168,70 +170,25 @@ class PSSController:
             print("Task not found.")
 
     def write_schedule_to_file(self) -> None:
-        ##Function to write schedule to a file
-        file_name = input("Enter the file name to write the schedule: ")
-        schedule_data = []
-
-        for task in self.schedule.tasks:
-            task_data = {
-                'Name': task.get_name(),
-                'Type': task.get_task_type(),
-                'StartTime': task.get_start_time(),
-                'Duration': task.get_duration()
-            }
-
-            if isinstance(task, RecurringTask):
-                task_data['StartDate'] = task.get_start_date()
-                task_data['EndDate'] = task.get_end_date()
-                task_data['Frequency'] = task.get_frequency()
-            elif isinstance(task, TransientTask):
-                task_data['Date'] = task.get_date()
-
-            schedule_data.append(task_data)
+         ##Function to write schedule to a file
+        file_name = input("Enter the file name to save the schedule: ")
 
         try:
-            with open(file_name, 'w') as file:
-                json.dump(schedule_data, file, indent=4)
-            print("Schedule written to file successfully.")
+            if self.schedule.write_file(file_name):
+                print("Schedule saved to file successfully.")
         except Exception as e:
-            print(f"Failed to write schedule to file: {e}")
-
+            print(f"Error occurred while saving the schedule: {str(e)}")
     def load_schedule_from_file(self) -> None:
-        ##Function to load schedule from a file
+       ##Function to load schedule from a file
         file_name = input("Enter the file name to load the schedule: ")
 
         try:
-            with open(file_name, 'r') as file:
-                schedule_data = json.load(file)
-
-                for task_data in schedule_data:
-                    task_name = task_data['Name']
-                    task_type = task_data['Type']
-                    start_time = task_data['StartTime']
-                    duration = task_data['Duration']
-                    start_date = task_data.get('StartDate')
-                    end_date = task_data.get('EndDate')
-                    frequency = task_data.get('Frequency')
-                    target_task_name = task_data.get('TargetTask')
-
-                    target_task = self.schedule.get_task(target_task_name) if target_task_name else None
-
-                    new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task)
-
-                   if new_task:
-                        try:
-                            if not self.schedule.add_task(new_task):
-                                print(f"Failed to add task '{task_name}' to the schedule.")
-                        except Exception as e:
-                            print(f"An error occurred while adding task '{task_name}' to the schedule: {e}")
-                    else:
-                        print(f"Failed to create task '{task_name}'.")
+            if self.schedule.read_file(file_name):
                 print("Schedule loaded from file successfully.")
         except FileNotFoundError:
             print(f"Error: File '{file_name}' not found.")
         except json.JSONDecodeError:
             print(f"Error: Invalid JSON format in the file '{file_name}'.")
-
     def view_file(self) -> None:
         ##Function to view contents of a file
         file_name = input("Enter the file name to view: ")
