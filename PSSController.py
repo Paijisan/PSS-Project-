@@ -84,14 +84,38 @@ class PSSController:
         frequency = int(input("Enter the frequency of the task (optional): "))
         target_task_name = input("Enter name for target task (optional): ")
 
+       try:
+            start_date = int(start_date)
+        except ValueError:
+            start_date = None
+            print("Invalid start date format. Task will be created without a start date.")
+
+        try:
+            end_date = int(end_date) if end_date else None
+        except ValueError:
+            end_date = None
+            print("Invalid end date format. Task will be created without an end date.")
+
+        try:
+            frequency = int(frequency) if frequency else None
+        except ValueError:
+            frequency = None
+            print("Invalid frequency format. Task will be created without a frequency.")
+
         ##Create new task
         new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task_name)
         
         ##Add task to schedule
-        if self.schedule.add_task(new_task):
-            print("Task added successfully!")
+        if new_task:
+            try:
+                if self.schedule.add_task(new_task):
+                    print("Task added successfully!")
+                else:
+                    print("Failed to add task to the schedule.")
+            except Exception as e:
+                print(f"An error occurred while adding task to the schedule: {e}")
         else:
-            print("Failed to add task.")
+            print("Failed to create task.")
 
     def display_day(self) -> None:
         ##Function to display tasks for a day
@@ -202,8 +226,14 @@ class PSSController:
 
                     new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task)
 
-                    if not self.schedule.add_task(new_task):
-                        print(f"Failed to add task '{task_name}' to the schedule.")
+                   if new_task:
+                        try:
+                            if not self.schedule.add_task(new_task):
+                                print(f"Failed to add task '{task_name}' to the schedule.")
+                        except Exception as e:
+                            print(f"An error occurred while adding task '{task_name}' to the schedule: {e}")
+                    else:
+                        print(f"Failed to create task '{task_name}'.")
                 print("Schedule loaded from file successfully.")
         except FileNotFoundError:
             print(f"Error: File '{file_name}' not found.")
