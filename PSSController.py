@@ -84,23 +84,15 @@ class PSSController:
         frequency = int(input("Enter the frequency of the task (optional): "))
         target_task_name = input("Enter name for target task (optional): ")
 
-       try:
-            start_date = int(start_date)
-        except ValueError:
-            start_date = None
-            print("Invalid start date format. Task will be created without a start date.")
-
-        try:
-            end_date = int(end_date) if end_date else None
-        except ValueError:
-            end_date = None
-            print("Invalid end date format. Task will be created without an end date.")
-
-        try:
-            frequency = int(frequency) if frequency else None
-        except ValueError:
-            frequency = None
-            print("Invalid frequency format. Task will be created without a frequency.")
+         try:
+            start_time = float(start_time_str)
+            duration = float(duration_str)
+            start_date = int(start_date_str)
+            end_date = int(end_date_str) if end_date_str else None
+            frequency = int(frequency_str) if frequency_str else None
+        except ValueError as ve:
+            print(f"Error converting input to appropriate data types: {ve}")
+            return
 
         ##Create new task
         new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task_name)
