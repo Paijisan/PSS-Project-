@@ -158,7 +158,7 @@ class Schedule:
             all_tasks.append(json.loads(task.to_json()))
 
         with open(file_name, "w") as out_file:
-            out_file.write(str(all_tasks))
+            out_file.write(json.dumps(all_tasks, indent=True))
         return True
 
     def read_file(self, file_name: str) -> bool:
