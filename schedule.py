@@ -173,7 +173,7 @@ class Schedule:
         with open(file_name, "r") as in_file:
             j = json.load(in_file)
             all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
-            self.add_tasks(all_tasks)
+            return self.add_tasks(all_tasks)
         return True
 
     def get_day_tasks(self, date: int) -> list[Task]:
