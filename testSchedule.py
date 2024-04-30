@@ -57,7 +57,6 @@ def scenario2():
     if s.add_task(new_task2):
         print(f"#3 Success, task added, task list: {s.tasks}")
 
-
     # 4. Read the file Set1.json.  This should work.
     if s.read_file("Set1.json"):
         print(f"#4 Success, file read, task list:: {s.tasks}")
