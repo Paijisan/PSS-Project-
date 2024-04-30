@@ -22,21 +22,19 @@ class Schedule:
         :param target_task: Task to be cancelled by an "anti task"
         :return: A Task of type AntiTask, TransientTask, or Recurring Task
         """
-        task_type = task_type.lower()
+        task_type = task_type.capitalize()
         match task_type:
-            case "cancellation" | "antitask":
+            case "Cancellation" | "Antitask":
                 # Create Anti task here
                 return AntiTask(task_name, task_type, start_time, duration, start_date, target_task)
-            case "vist" | "shopping" | "appointment"|"transient":
+            case "Visit" | "Shopping" | "Appointment" | "Transient":
                 # Create transient task here
                 return TransientTask(task_name, task_type, start_time, duration, start_date)
-            case "recurring":
+            case "Class" | "Study" | "Sleep" | "Exercise" | "Work" | "Meal" | "Recurring":
                 # Create recurring task
                 return RecurringTask(task_name, task_type, start_time, duration, start_date, end_date, frequency)
             case _:
-                raise Exception("Invalid task type")
-
-
+                raise InvalidTaskException()
     @staticmethod
     def create_task_from_json(json_string: str) -> Task:
         """
@@ -173,7 +171,7 @@ class Schedule:
         with open(file_name, "r") as in_file:
             j = json.load(in_file)
             all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
-            self.add_tasks(all_tasks)
+            return self.add_tasks(all_tasks)
         return True
 
     def get_day_tasks(self, date: int) -> list[Task]:
@@ -355,7 +353,11 @@ class Schedule:
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
+<<<<<<< HEAD
             case "vist" | "shopping" | "appointment"|"transient":
+=======
+            case "Cancellation" | "Visit" | "Shopping" | "Appointment":
+>>>>>>> 3af70b2913b7f7be0e443bc023fa5b0dddd50929
                 time = datetime.fromisoformat(f"{task.get_date()}T{hour:02d}{minute:02d}00")
             case _:
                 time = datetime.fromisoformat(f"{task.get_start_date()}T{hour:02d}{minute:02d}00")
