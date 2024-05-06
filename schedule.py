@@ -22,19 +22,19 @@ class Schedule:
         :param target_task: Task to be cancelled by an "anti task"
         :return: A Task of type AntiTask, TransientTask, or Recurring Task
         """
+        task_type = task_type.capitalize()
         match task_type:
-            case "Cancellation":
+            case "Cancellation" | "Antitask":
                 # Create Anti task here
                 return AntiTask(task_name, task_type, start_time, duration, start_date, target_task)
-            case "Vist" | "Shopping" | "Appointment":
+            case "Visit" | "Shopping" | "Appointment" | "Transient":
                 # Create transient task here
                 return TransientTask(task_name, task_type, start_time, duration, start_date)
-            case _:
+            case "Class" | "Study" | "Sleep" | "Exercise" | "Work" | "Meal" | "Recurring":
                 # Create recurring task
                 return RecurringTask(task_name, task_type, start_time, duration, start_date, end_date, frequency)
-
-
-
+            case _:
+                raise InvalidTaskException()
     @staticmethod
     def create_task_from_json(json_string: str) -> Task:
         """
@@ -158,7 +158,7 @@ class Schedule:
             all_tasks.append(json.loads(task.to_json()))
 
         with open(file_name, "w") as out_file:
-            out_file.write(str(all_tasks))
+            out_file.write(json.dumps(all_tasks, indent=True))
         return True
 
     def read_file(self, file_name: str) -> bool:
@@ -171,7 +171,7 @@ class Schedule:
         with open(file_name, "r") as in_file:
             j = json.load(in_file)
             all_tasks = [Schedule.create_task_from_json(str(task)) for task in j]
-            self.add_tasks(all_tasks)
+            return self.add_tasks(all_tasks)
         return True
 
     def get_day_tasks(self, date: int) -> list[Task]:
@@ -353,7 +353,7 @@ class Schedule:
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
-            case "Cancellation" | "Vist" | "Shopping" | "Appointment":
+            case "Cancellation" | "Visit" | "Shopping" | "Appointment":
                 time = datetime.fromisoformat(f"{task.get_date()}T{hour:02d}{minute:02d}00")
             case _:
                 time = datetime.fromisoformat(f"{task.get_start_date()}T{hour:02d}{minute:02d}00")
@@ -491,6 +491,9 @@ class AntiTaskRemoveException(Exception):
 
 
 class TaskOverlapException(Exception):
+    """
+    Newly requested Task overlaps with older task
+    """
     def __init__(self, name, *args):
         super().__init__(args)
         self.name = name

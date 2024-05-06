@@ -2,12 +2,22 @@ import json
 import datetime
 
 class Task():
+    """
+    Superclass for all tasks. Should not be instantiated itself
+
+    _name: name of the task
+    _task_type: type of the task
+    _start_time: when the task starts
+    _duration: how long the duration exists from start time
+    """
     def __init__(self, name: str, task_type: str,
                  start_time: float, duration: float):
         self._name = name
         self._task_type = task_type
         self._start_time = start_time
         self._duration = duration
+    
+    # Getters and Setters
     
     def get_name(self) -> str:
         return self._name
@@ -38,6 +48,10 @@ class Task():
         return True
 
     def to_json(self) -> str:
+        """
+        Serialize task to JSON
+        :return: a string of the task in JSON form
+        """
         j: dict = {
             'Name': self._name,
             'Type': self._task_type,
@@ -71,6 +85,14 @@ class Task():
         return datetime.datetime.strptime(str(date), "%Y%m%d").isoformat()
 
 class RecurringTask(Task):
+    """
+    A recurring task occurs on a repeating basis
+
+    _start_date: Beginning day of when task repeats
+    _end_date: Ending day of when task repeats
+    _frequency: how often the task is repeated in the range of days.
+        1 for daily and 7 for weekly
+    """
     def __init__(self, name: str, task_type: str,
                  start_time: float, duration: float,
                  start_date: int, end_date: int,
@@ -79,6 +101,8 @@ class RecurringTask(Task):
         self._start_date = start_date
         self._end_date = end_date
         self._frequency = frequency
+
+    # Getters and Setters
 
     def get_start_date(self) -> int:
         return self._start_date
@@ -102,6 +126,10 @@ class RecurringTask(Task):
         return True
 
     def to_json(self) -> str:
+        """
+        Serialize task to JSON
+        :return: a string of the task in JSON form
+        """
         j: dict = {
             'Name': self._name,
             'Type': self._task_type,
@@ -130,11 +158,18 @@ class RecurringTask(Task):
 
     
 class TransientTask(Task):
+    """
+    A task that only occurs a single time
+
+    _date: the date the task occurs
+    """
     def __init__(self, name: str, task_type: str,
                  start_time: float, duration: float,
                  date: int):
         super().__init__(name, task_type, start_time, duration)
         self._date = date
+
+    # Getters and Setters
     
     def get_date(self) -> int:
         return self._date
@@ -144,6 +179,10 @@ class TransientTask(Task):
         return True
 
     def to_json(self) -> str:
+        """
+        Serialize task to JSON
+        :return: a string of the task in JSON form
+        """
         j: dict = {
             'Name': self._name,
             'Type': self._task_type,
@@ -154,11 +193,18 @@ class TransientTask(Task):
         return json.dumps(j)
 
 class AntiTask(TransientTask):
+    """
+    A task that cancels out one particular occurence of a reccuring task
+
+    _target_task: the recurring task to cancel out
+    """
     def __init__(self, name: str, task_type: str,
                  start_time: float, duration: float,
                  date: int, target_task: RecurringTask | None = None):
         super().__init__(name, task_type, start_time, duration, date)
         self._target_task = target_task
+
+    # Getters
 
     def get_target_task(self) -> RecurringTask | None:
         return self._target_task
