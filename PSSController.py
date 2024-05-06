@@ -6,14 +6,14 @@ import json
 
 class PSSController:
     def __init__(self):
+        ##Initialize schedule, viewer, and other variables
         self.schedule: Schedule = Schedule()
         self.viewer: Viewer = Viewer()
-        self.current_view = None
-        self.menus: List = []
         self.loaded_tasks: List[Task] = []
 
     def menu_and_act_loop(self) -> None:
-        while True:
+        ##Main menu loop
+        while True: ##user choice will correspond to the needed method and loop will end
             print("\nMain Menu")
             print("1. Add Task")
             print("2. Display Day")
@@ -35,39 +35,27 @@ class PSSController:
             if choice == "1":
                 self.add_task()
             elif choice == "2":
-                date = int(input("Enter the date in YYYYMMDD format: "))
-                self.display_day(date)
+                self.display_day()
             elif choice == "3":
-                date = int(input("Enter any date within the week in YYYYMMDD format: "))
-                self.display_week(date)
+                self.display_week()
             elif choice == "4":
-                date = int(input("Enter any date within the month in YYYYMMDD format: "))
-                self.display_month(date)
+                self.display_month()
             elif choice == "5":
                 self.edit_task()
             elif choice == "6":
                 self.delete_task()
             elif choice == "7":
-                file_name = input("Enter the file name to write the schedule: ")
-                self.write_schedule_to_file(file_name)
+                self.write_schedule_to_file()
             elif choice == "8":
-                file_name = input("Enter the file name to load the schedule: ")
-                self.load_schedule_from_file(file_name)
+                self.load_schedule_from_file()
             elif choice == "9":
-                file_name = input("Enter the file name to view: ")
-                self.view_file(file_name)
+                self.view_file()
             elif choice == "10":
-                file_name = input("Enter the file name to view day: ")
-                date = int(input("Enter the date in YYYYMMDD format: "))
-                self.view_file_day(file_name, date)
+                self.view_file_day()
             elif choice == "11":
-                file_name = input("Enter the file name to view week: ")
-                date = int(input("Enter any date within the week in YYYYMMDD format: "))
-                self.view_file_week(file_name, date)
+                self.view_file_week()
             elif choice == "12":
-                file_name = input("Enter the file name to view month: ")
-                date = int(input("Enter any date within the month in YYYYMMDD format: "))
-                self.view_file_month(file_name, date)
+                self.view_file_month()
             elif choice == "13":
                 self.write_loaded_tasks_to_schedule()
             elif choice == "0":
@@ -77,21 +65,16 @@ class PSSController:
                 print("Invalid choice. Please select a valid option.")
     
     def find_task(self, task_name: str) -> bool:
-        """
-        Find a task by its name.
-
-        Parameters:
-            task_name (str): The name of the task to find.
-
-        Returns:
-            bool: True if the task is found, False otherwise.
-        """
-        for task in self.schedule.tasks:
+        ##Function to find a task by its name
+        for task in self.schedule.tasks: ##iterate though the tasks in the schedule
             if task.get_name() == task_name:
-                return True
+                return True ##if task with the given task name is found, true is returned
         return False
 
+
     def add_task(self) -> None:
+        ##Function to add a new task
+        ##prompt user to input details for a new task
         print("Now adding a new task")
         task_name = input("Enter a task name: ")
         task_type = input("Enter task type: ")
@@ -102,40 +85,68 @@ class PSSController:
         frequency = int(input("Enter the frequency of the task (optional): "))
         target_task_name = input("Enter name for target task (optional): ")
 
-        if target_task_name:
-            target_task = self.schedule.get_task(target_task_name)
-        else:
-            target_task = None
+        try:
+            start_time = float(start_time)
+            duration = float(duration)
+            start_date = int(start_date)
+            end_date = int(end_date) if end_date else None
+            frequency = int(frequency) if frequency else None
+        except ValueError as ve:
+            print(f"Error converting input to appropriate data types: {ve}")
+            return
 
-        new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task)
+        ##Create new task
+        new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task_name)
         
-        if self.schedule.add_task(new_task):
-            print("Task added successfully!")
+        ##Add task to schedule
+        if new_task:
+            try:
+                if self.schedule.add_task(new_task):
+                    print("Task added successfully!")
+                else:
+                    print("Failed to add task to the schedule.")
+            except Exception as e:
+                print(f"An error occurred while adding task to the schedule: {e}")
         else:
-            print("Failed to add task.")
+            print("Failed to create task.")
 
-    def display_day(self, date: int) -> None:
+
+    def display_day(self) -> None:
+        ##Function to display tasks for a day
+        date = int(input("Enter the date in YYYYMMDD format: "))
         day_tasks = self.schedule.get_day_tasks(date)
         self.viewer.show_day(day_tasks)
 
-    def display_week(self, date: int) -> None:
+    def display_week(self) -> None:
+        ##Function to display tasks for a week
+        ##prompt the user for an input date 
+        ##rerieve tasks for the specified day from the schedule
+        date = int(input("Enter any date within the week in YYYYMMDD format: "))
         week_tasks = self.schedule.get_week_tasks(date)
         self.viewer.show_week(week_tasks)
 
-    def display_month(self, date: int) -> None:
+    def display_month(self) -> None:
+        # Function to display tasks for a month
+        ##prompt the user for an input date 
+        ##retrieve tasks for the specified week from the schedule
+        date = int(input("Enter any date within the month in YYYYMMDD format: "))
         month_tasks = self.schedule.get_month_tasks(date)
         self.viewer.show_month(month_tasks)
 
-    def edit_task(self)-> None:
+    def edit_task(self) -> None:
+        ##Function to edit a task
+        ##Prompt the user to input the name of the task to edit.
+        ##If the task exists, prompt the user to input new details for the task (name, type, start time, duration).
+        ##Create a new task object with the updated details.
         task_name = input("Enter the name of the task to edit: ")
 
-        ##check to see if task is found in schedule
         if self.find_task(task_name):
             new_task_name = input("Enter new task name: ")
             new_task_type = input("Enter new task type: ")
             new_task_start_time = float(input("Enter new task start time: "))
             new_task_duration = float(input("Enter new task duration: "))
 
+            ##Create new task
             new_task = Task(new_task_name, new_task_type, new_task_start_time, new_task_duration)
 
             if self.schedule.edit_task(task_name, new_task):  
@@ -144,10 +155,12 @@ class PSSController:
                 print("Failed to edit task.")
         else:
             print("Task not found.")
-        
+
     def delete_task(self) -> None:
+        ##Function to delete a task
         task_name = input("Enter the name of the task to delete: ")
         task = self.schedule.get_task(task_name)
+
         if task:
             if self.schedule.delete_task(task):
                 print("Task deleted successfully!")
@@ -156,41 +169,79 @@ class PSSController:
         else:
             print("Task not found.")
 
-    def write_schedule_to_file(self, file_name: str) -> None:
-        schedule_data = []
+    def write_schedule_to_file(self) -> None:
+         ##Function to write schedule to a file
+        file_name = input("Enter the file name to save the schedule: ")
 
-        for task in self.schedule.tasks:
+        try:
+            if self.schedule.write_file(file_name):
+                print("Schedule saved to file successfully.")
+        except Exception as e:
+            print(f"Error occurred while saving the schedule: {str(e)}")
+    def load_schedule_from_file(self) -> None:
+       ##Function to load schedule from a file
+        file_name = input("Enter the file name to load the schedule: ")
 
-            task_data = {'name': task.get_name(), 'type': task.get_task_type(), 'start_date': task.get_start_date(), 'start_time': task.get_start_time(), 'duration': task.get_duration(), 
-                         'end_date': task.get_end_date(), 'frequency': task.get_frequency()}
-            
-            schedule_data.append(task_data)
+        try:
+            if self.schedule.read_file(file_name):
+                print("Schedule loaded from file successfully.")
+        except FileNotFoundError:
+            print(f"Error: File '{file_name}' not found.")
+        except json.JSONDecodeError:
+            print(f"Error: Invalid JSON format in the file '{file_name}'.")
+    def view_file(self) -> None:
+        ##Function to view contents of a file
+        file_name = input("Enter the file name to view: ")
 
-            with open(file_name, 'w') as file:
-            json.dump(schedule_data, file, indent=4)
+        try:
+            with open(file_name, 'r') as file:
+                file_contents = file.read()
+                print("File contents: ")
+                print(file_contents)
+        except FileNotFoundError:
+            print(f"File '{file_name}' not found.")
 
-        print("Schedule written to", file_name)
+    def view_file_day(self) -> None:
+        ##Function to view tasks for a day from a file
+        file_name = input("Enter the file name to view day: ")
+        date = int(input("Enter the date in YYYYMMDD format: "))
 
-    def load_schedule_from_file(self, file_name: str) -> None:
-        # Implementation goes here
-        pass
+        try:
+            with open(file_name, 'r') as file:
+                tasks_for_date = []
 
-    def view_file(self, file_name: str) -> None:
-        # Implementation goes here
-        pass
+                for line in file:
+                    task_info = line.strip().split(',')
+                    if len(task_info) >= 3:  
+                        task_date = int(task_info[2])  
+                        if task_date == date:
+                            name = task_info[0]
+                            task_type = task_info[1]
+                            start_time = float(task_info[3])  
+                            duration = float(task_info[4])   
+                            new_task = Task(name, task_type, start_time, duration)
+                            tasks_for_date.append(new_task)
 
-    def view_file_day(self, file_name: str, date: int) -> None:
-        # Implementation goes here
-        pass
+                if tasks_for_date:
+                    print(f"Tasks for date {date}:")
+                    for task in tasks_for_date:
+                        print(task)
+                else:
+                    print("No tasks found for the specified date.")
+        except FileNotFoundError:
+            print(f"File '{file_name}' not found.")
 
-    def view_file_week(self, file_name: str, date: int) -> None:
-        # Implementation goes here
-        pass
-
-    def view_file_month(self, file_name: str, date: int) -> None:
-        # Implementation goes here
-        pass
+    ##Implement other view_file functions similarly
 
     def write_loaded_tasks_to_schedule(self) -> None:
-        # Implementation goes here
-        pass
+        ##Function to write loaded tasks to the schedule
+        for task in self.loaded_tasks:
+            if self.schedule.add_task(task):
+                print(f"Task '{task.get_name()}' added to the schedule successfully")
+            else:
+                print(f"Failed to add task '{task.get_name()}' to the schedule")
+
+##Instantiate the controller and start the program
+if __name__ == "__main__":
+    controller = PSSController()
+    controller.menu_and_act_loop()
