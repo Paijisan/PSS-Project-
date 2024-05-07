@@ -1,8 +1,10 @@
+
 from schedule import Schedule
 from viewer import Viewer
 from task import Task
 from typing import List
 import json
+
 
 class PSSController:
     def __init__(self):
@@ -13,7 +15,7 @@ class PSSController:
 
     def menu_and_act_loop(self) -> None:
         ##Main menu loop
-        while True: ##user choice will correspond to the needed method and loop will end
+        while True:  ##user choice will correspond to the needed method and loop will end
             print("\nMain Menu")
             print("1. Add Task")
             print("2. Display Day")
@@ -63,14 +65,13 @@ class PSSController:
                 break
             else:
                 print("Invalid choice. Please select a valid option.")
-    
+
     def find_task(self, task_name: str) -> bool:
         ##Function to find a task by its name
-        for task in self.schedule.tasks: ##iterate though the tasks in the schedule
+        for task in self.schedule.tasks:  ##iterate though the tasks in the schedule
             if task.get_name() == task_name:
-                return True ##if task with the given task name is found, true is returned
+                return True  ##if task with the given task name is found, true is returned
         return False
-
 
     def add_task(self) -> None:
         ##Function to add a new task
@@ -81,23 +82,36 @@ class PSSController:
         start_time = float(input("Enter start time (in hours): "))
         duration = float(input("Enter duration of time (in hours): "))
         start_date = int(input("Enter start date (in format YYYYMMDD): "))
-        end_date = int(input("Enter the end date of the task (optional): "))
-        frequency = int(input("Enter the frequency of the task (optional): "))
+
+        ##Handling optional inputs
+        end_date_input = input("Enter the end date of the task (optional): ")
+        try:
+            end_date = int(end_date_input) if end_date_input.strip() else None
+        except ValueError:
+            print("Invalid input for end date. Setting end date to None.")
+            end_date = None
+
+        frequency_input = input("Enter the frequency of the task (optional): ")
+        try:
+            frequency = int(frequency_input) if frequency_input.strip() else None
+        except ValueError:
+            print("Invalid input for frequency. Setting frequency to None.")
+            frequency = None
+
         target_task_name = input("Enter name for target task (optional): ")
 
         try:
             start_time = float(start_time)
             duration = float(duration)
             start_date = int(start_date)
-            end_date = int(end_date) if end_date else None
-            frequency = int(frequency) if frequency else None
         except ValueError as ve:
             print(f"Error converting input to appropriate data types: {ve}")
             return
 
         ##Create new task
-        new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date, frequency, target_task_name)
-        
+        new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date,
+                                             frequency, target_task_name)
+
         ##Add task to schedule
         if new_task:
             try:
@@ -110,7 +124,6 @@ class PSSController:
         else:
             print("Failed to create task.")
 
-
     def display_day(self) -> None:
         ##Function to display tasks for a day
         date = int(input("Enter the date in YYYYMMDD format: "))
@@ -119,7 +132,7 @@ class PSSController:
 
     def display_week(self) -> None:
         ##Function to display tasks for a week
-        ##prompt the user for an input date 
+        ##prompt the user for an input date
         ##rerieve tasks for the specified day from the schedule
         date = int(input("Enter any date within the week in YYYYMMDD format: "))
         week_tasks = self.schedule.get_week_tasks(date)
@@ -127,7 +140,7 @@ class PSSController:
 
     def display_month(self) -> None:
         # Function to display tasks for a month
-        ##prompt the user for an input date 
+        ##prompt the user for an input date
         ##retrieve tasks for the specified week from the schedule
         date = int(input("Enter any date within the month in YYYYMMDD format: "))
         month_tasks = self.schedule.get_month_tasks(date)
@@ -149,7 +162,7 @@ class PSSController:
             ##Create new task
             new_task = Task(new_task_name, new_task_type, new_task_start_time, new_task_duration)
 
-            if self.schedule.edit_task(task_name, new_task):  
+            if self.schedule.edit_task(task_name, new_task):
                 print("Task edited successfully!")
             else:
                 print("Failed to edit task.")
@@ -170,7 +183,7 @@ class PSSController:
             print("Task not found.")
 
     def write_schedule_to_file(self) -> None:
-         ##Function to write schedule to a file
+        ##Function to write schedule to a file
         file_name = input("Enter the file name to save the schedule: ")
 
         try:
@@ -178,8 +191,9 @@ class PSSController:
                 print("Schedule saved to file successfully.")
         except Exception as e:
             print(f"Error occurred while saving the schedule: {str(e)}")
+
     def load_schedule_from_file(self) -> None:
-       ##Function to load schedule from a file
+        ##Function to load schedule from a file
         file_name = input("Enter the file name to load the schedule: ")
 
         try:
@@ -189,6 +203,7 @@ class PSSController:
             print(f"Error: File '{file_name}' not found.")
         except json.JSONDecodeError:
             print(f"Error: Invalid JSON format in the file '{file_name}'.")
+
     def view_file(self) -> None:
         ##Function to view contents of a file
         file_name = input("Enter the file name to view: ")
@@ -212,13 +227,13 @@ class PSSController:
 
                 for line in file:
                     task_info = line.strip().split(',')
-                    if len(task_info) >= 3:  
-                        task_date = int(task_info[2])  
+                    if len(task_info) >= 3:
+                        task_date = int(task_info[2])
                         if task_date == date:
                             name = task_info[0]
                             task_type = task_info[1]
-                            start_time = float(task_info[3])  
-                            duration = float(task_info[4])   
+                            start_time = float(task_info[3])
+                            duration = float(task_info[4])
                             new_task = Task(name, task_type, start_time, duration)
                             tasks_for_date.append(new_task)
 
@@ -240,6 +255,7 @@ class PSSController:
                 print(f"Task '{task.get_name()}' added to the schedule successfully")
             else:
                 print(f"Failed to add task '{task.get_name()}' to the schedule")
+
 
 ##Instantiate the controller and start the program
 if __name__ == "__main__":
