@@ -1,3 +1,4 @@
+
 from schedule import Schedule
 from viewer import Viewer
 from task import Task
@@ -107,21 +108,19 @@ class PSSController:
             print(f"Error converting input to appropriate data types: {ve}")
             return
 
-        ##Create new task
-        new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date,
-                                             frequency, target_task_name)
-
-        ##Add task to schedule
-        if new_task:
+        def add_task_to_schedule(self, task_name, task_type, start_time, duration, start_date, end_date, frequency,
+                                 target_task_name):
             try:
+                new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date,
+                                                     frequency, target_task_name)
                 if self.schedule.add_task(new_task):
                     print("Task added successfully!")
                 else:
                     print("Failed to add task to the schedule.")
             except Exception as e:
                 print(f"An error occurred while adding task to the schedule: {e}")
-        else:
-            print("Failed to create task.")
+            else:
+                print("Failed to create task.")
 
     def display_day(self) -> None:
         ##Function to display tasks for a day
@@ -192,16 +191,20 @@ class PSSController:
             print(f"Error occurred while saving the schedule: {str(e)}")
 
     def load_schedule_from_file(self) -> None:
-        ##Function to load schedule from a file
         file_name = input("Enter the file name to load the schedule: ")
 
         try:
-            if self.schedule.read_file(file_name):
-                print("Schedule loaded from file successfully.")
+           if self.schedule.read_file(file_name):
+               print( "Schedule loaded from file successfully.")
         except FileNotFoundError:
             print(f"Error: File '{file_name}' not found.")
         except json.JSONDecodeError:
             print(f"Error: Invalid JSON format in the file '{file_name}'.")
+        except TaskOverlapException as toe:
+            print(f"Error: Task overlap detected while reading tasks from file: {str(toe)}")
+            # Handle the overlap, possibly by skipping the conflicting task or modifying it
+        except Exception as e:
+            print("An error occurred:", str(e))
 
     def view_file(self) -> None:
         ##Function to view contents of a file
