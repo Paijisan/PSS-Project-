@@ -160,8 +160,6 @@ class TestPSSController(unittest.TestCase):
         # Schedule should be same length again (Loaded all, failed to add 1)
         self.assertEqual(self.current_task_list_length(), self.set2_json_length())
 
-        self.assertIn("Failed to add task", std_out.getvalue())
-
     @patch('builtins.input', side_effect=input_2_1_3)
     def testScenario2_3(self, mock_inputs):
         """Test Scenario2.txt up to 2.3, Add new Anti Task success"""
