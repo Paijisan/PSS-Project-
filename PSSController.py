@@ -108,19 +108,17 @@ class PSSController:
             print(f"Error converting input to appropriate data types: {ve}")
             return
 
-        def add_task_to_schedule(self, task_name, task_type, start_time, duration, start_date, end_date, frequency,
-                                 target_task_name):
-            try:
-                new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date,
-                                                     frequency, target_task_name)
-                if self.schedule.add_task(new_task):
-                    print("Task added successfully!")
-                else:
-                    print("Failed to add task to the schedule.")
-            except Exception as e:
-                print(f"An error occurred while adding task to the schedule: {e}")
+        try:
+            new_task = self.schedule.create_task(task_name, task_type, start_time, duration, start_date, end_date,
+                                                 frequency, target_task_name)
+            if self.schedule.add_task(new_task):
+                print("Task added successfully!")
             else:
-                print("Failed to create task.")
+                print("Failed to add task to the schedule.")
+        except Exception as e:
+            print(f"An error occurred while adding task to the schedule: {e}")
+        else:
+            print("Failed to create task.")
 
     def display_day(self) -> None:
         ##Function to display tasks for a day
