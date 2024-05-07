@@ -1,4 +1,4 @@
-
+import schedule
 from schedule import Schedule
 from viewer import Viewer
 from task import Task
@@ -198,7 +198,7 @@ class PSSController:
             print(f"Error: File '{file_name}' not found.")
         except json.JSONDecodeError:
             print(f"Error: Invalid JSON format in the file '{file_name}'.")
-        except TaskOverlapException as toe:
+        except schedule.TaskOverlapException as toe:
             print(f"Error: Task overlap detected while reading tasks from file: {str(toe)}")
             # Handle the overlap, possibly by skipping the conflicting task or modifying it
         except Exception as e:
