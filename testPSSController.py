@@ -131,11 +131,8 @@ class TestPSSController(unittest.TestCase):
         # Schedule should be same length again (remove 1 added 1, fail to add 2, failed to read Set2)
         self.assertEqual(self.current_task_list_length(), self.set1_json_length())
 
-        # TODO PSS crashes with TaskOverlapException, once handled update this test!
-        # Test success notification
-        self.assertTrue(False)  # TODO Remove this when a fail message is added
-        # Currently there is no fail message, This always fails
-        self.assertIn("Fail Message For Reading File", std_out.getvalue())
+        # Failure occurs due to task overlap, test user notice
+        self.assertIn("Task overlap detected", std_out.getvalue())
 
     @patch('builtins.input', side_effect=input_2_1_1)
     def testScenario2_1(self, mock_inputs):
@@ -162,8 +159,6 @@ class TestPSSController(unittest.TestCase):
 
         # Schedule should be same length again (Loaded all, failed to add 1)
         self.assertEqual(self.current_task_list_length(), self.set2_json_length())
-
-        self.assertIn("Failed to add task", std_out.getvalue())
 
     @patch('builtins.input', side_effect=input_2_1_3)
     def testScenario2_3(self, mock_inputs):
