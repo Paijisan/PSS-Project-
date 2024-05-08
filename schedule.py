@@ -353,7 +353,7 @@ class Schedule:
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
-            case "Cancellation" | "Visit" | "Shopping" | "Appointment":
+            case "Cancellation" | "Antitask" | "Visit" | "Shopping" | "Appointment" | "Transient":
                 time = datetime.fromisoformat(f"{task.get_date()}T{hour:02d}{minute:02d}00")
             case _:
                 time = datetime.fromisoformat(f"{task.get_start_date()}T{hour:02d}{minute:02d}00")

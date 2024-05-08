@@ -117,8 +117,6 @@ class PSSController:
                 print("Failed to add task to the schedule.")
         except Exception as e:
             print(f"An error occurred while adding task to the schedule: {e}")
-        else:
-            print("Failed to create task.")
 
     def display_day(self) -> None:
         ##Function to display tasks for a day
