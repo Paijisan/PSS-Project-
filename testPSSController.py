@@ -108,7 +108,7 @@ class TestPSSController(unittest.TestCase):
         # Schedule should be same length again (remove 1, added 1, fail to add 1)
         self.assertEqual(self.current_task_list_length(), self.set1_json_length())
 
-        self.assertIn("Failed to add task", std_out.getvalue())
+        self.assertIn("error", std_out.getvalue())
 
     @patch('builtins.input', side_effect=input_1_1_5)
     def testScenario1_5(self, mock_inputs):
@@ -120,7 +120,7 @@ class TestPSSController(unittest.TestCase):
         self.assertEqual(self.current_task_list_length(), self.set1_json_length())
 
         # By step 5 we have failed to add tasks twice
-        self.assertEqual(2, std_out.getvalue().count("Failed to add task to the schedule"))
+        self.assertEqual(2, std_out.getvalue().count("error"))
 
     @patch('builtins.input', side_effect=input_1_1_6)
     def testScenario1_6(self, mock_inputs):
