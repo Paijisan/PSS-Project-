@@ -24,13 +24,13 @@ class Schedule:
         """
         task_type = task_type.capitalize()
         match task_type:
-            case "Cancellation" | "Antitask":
+            case "Cancellation":
                 # Create Anti task here
                 return AntiTask(task_name, task_type, start_time, duration, start_date, target_task)
-            case "Visit" | "Shopping" | "Appointment" | "Transient":
+            case "Visit" | "Shopping" | "Appointment":
                 # Create transient task here
                 return TransientTask(task_name, task_type, start_time, duration, start_date)
-            case "Class" | "Study" | "Sleep" | "Exercise" | "Work" | "Meal" | "Recurring":
+            case "Class" | "Study" | "Sleep" | "Exercise" | "Work" | "Meal":
                 # Create recurring task
                 return RecurringTask(task_name, task_type, start_time, duration, start_date, end_date, frequency)
             case _:
@@ -353,7 +353,7 @@ class Schedule:
         hour = int(task.get_start_time())
         minute = int(task.get_start_time() % 1.0 * 60)
         match task.get_task_type():
-            case "Cancellation" | "Antitask" | "Visit" | "Shopping" | "Appointment" | "Transient":
+            case "Cancellation" | "Visit" | "Shopping" | "Appointment":
                 time = datetime.fromisoformat(f"{task.get_date()}T{hour:02d}{minute:02d}00")
             case _:
                 time = datetime.fromisoformat(f"{task.get_start_date()}T{hour:02d}{minute:02d}00")
