@@ -130,7 +130,7 @@ class PSSController:
         ##rerieve tasks for the specified day from the schedule
         date = int(input("Enter any date within the week in YYYYMMDD format: "))
         week_tasks = self.schedule.get_week_tasks(date)
-        self.viewer.show_week(week_tasks)
+        self.viewer.show_week(week_tasks,date)
 
     def display_month(self) -> None:
         # Function to display tasks for a month
@@ -138,7 +138,7 @@ class PSSController:
         ##retrieve tasks for the specified week from the schedule
         date = int(input("Enter any date within the month in YYYYMMDD format: "))
         month_tasks = self.schedule.get_month_tasks(date)
-        self.viewer.show_month(month_tasks)
+        self.viewer.show_month(month_tasks,date)
 
     def edit_task(self) -> None:
         ##Function to edit a task
