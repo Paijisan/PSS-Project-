@@ -1,8 +1,9 @@
-; testing week view
+; testing viewer
 Send cls {Enter}
-Send py PSSController.py
+Send py PSSController 
+Send {Tab}
 Send {Enter}
-; test transient task printing
+; create transient task 
 Send 1 
 Send {Enter}
 Send Transient Task 1 {Enter}
@@ -14,7 +15,7 @@ Send 19990202 {Enter}
 Send {Enter}
 Send {Enter}
 Send {Enter}
-; test daily recurring task printing
+; create daily recurring task 
 Send 1 
 Send {Enter}
 Send Recurring Daily Task {Enter}
@@ -26,7 +27,7 @@ Send 19990202 {Enter}
 Send 20000101 {Enter}
 Send 1 {Enter}
 Send {Enter}
-; test weekly recurring task printing
+; create weekly recurring task
 Send 1 
 Send {Enter}
 Send Recurring Weekly Task {Enter}
@@ -38,7 +39,7 @@ Send 19990201 {Enter}
 Send 20000101 {Enter}
 Send 7 {Enter}
 Send {Enter}
-; test antitask
+; create antitask
 Send 1
 Send {Enter}
 Send Antitask {Enter}
@@ -57,7 +58,7 @@ Send 19990214 {Enter}
 ; show week schedule
 Send 3
 Send {Enter}
-Send 19990214
+Send 19990401
 Send {Enter}
 ; show month schedule
 Send 4

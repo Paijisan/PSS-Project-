@@ -3,6 +3,7 @@ import datetime
 from schedule import InvalidTaskException
 import calendar
 from datetime import date
+from datetime import timedelta
 class Viewer:
     def display_menu(self, menu):
         print(menu)
@@ -21,7 +22,7 @@ class Viewer:
     def show_week(self,week,dateInt):
         days = [[] for i in range(7)]
         date=datetime.date(int(dateInt/10000),int(dateInt/100)%100,dateInt%100)
-        dateInt=dateInt-date.weekday()
+        date=date-timedelta(days=date.weekday())
         antitasks = []
         for currentTask in week:
             if isinstance(currentTask, type(TransientTask(0,0,0,0,0))):
@@ -50,19 +51,18 @@ class Viewer:
             antiDateInt=antitask.get_date()
             weekday=datetime.date(int(antiDateInt/10000),int(antiDateInt/100)%100,antiDateInt%100).weekday()
             for task in days[weekday]:
-                if (task.get_name()==antitask.get_target_task()):
+                if (task.get_name()==antitask.get_target_task() and task.get_start_time()==antitask.get_start_time()):
                     days[weekday].remove(task)
         if len(week) > 0:
             for day in days:
+                print(date)
+                date=date+timedelta(days=1)
                 for currentTask in day:
-                    date=datetime.date(int(dateInt/10000),int(dateInt/100)%100,dateInt%100)
-                    print(date)
-                    dateInt=dateInt+1
                     print(currentTask.get_name(),":",currentTask.get_start_time(),"-",currentTask.get_start_time()+currentTask.get_duration())
        
     def show_month(self,month,dateInt):
         monthCalendar = calendar.monthcalendar(int(dateInt/10000),int(dateInt/100)%100)
-        taskCalendar = [[[] for i in range(7)] for i in range(4)]
+        taskCalendar = [[[] for i in range(7)] for i in range(len(monthCalendar))]
         antitasks = []
         for currentTask in month:
             if isinstance(currentTask, type(TransientTask(0,0,0,0,0))):
@@ -112,27 +112,15 @@ class Viewer:
         for week in taskCalendar:
             j=0
             for day in week:
-                print(int(dateInt/10000),",",int(dateInt/100)%100,",",monthCalendar[i][j])
-                for currentTask in day:
-                    print(currentTask.get_name(),":",currentTask.get_start_time(),"-",currentTask.get_start_time()+currentTask.get_duration())
+                if (monthCalendar[i][j]!=0):
+                    print(int(dateInt/10000),"-",int(dateInt/100)%100,"-",monthCalendar[i][j])
+                    for currentTask in day:
+                        print(currentTask.get_name(),":",currentTask.get_start_time(),"-",currentTask.get_start_time()+currentTask.get_duration())
                 j=j+1
             i=i+1
     def show_all(self, allTasks):
         allTasks=allTasks.sort()
-        for task in allTasks:
-            if isinstance(currentTask, type(AntiTask(0,0,0,0,0))):
-                try:
-                    taskCalendar.remove(currentTask.get_target_task())
-                except Exception as e:
-                    null=None
-        for task in allTasks:
-            if isinstance(currentTask, type(TransientTask(0,0,0,0,0))):
-                dateInt = currentTask.get_date()
-            elif isinstance(currentTask, type(RecurringTask(0,0,0,0,0,0,0))):
-                dateInt=currentTask.get_start_date()   
-            date = datetime.date(int(dateInt/10000),int(dateInt/100)%100,dateInt%100)
-            print(date)
-            print(currentTask.get_name(),":",currentTask.get_start_time(),"-",currentTask.get_start_time()+currentTask.get_duration())
+        
     def show_task_values(self, taskValues):
         for taskValue in taskValues:
             print(taskValue)
