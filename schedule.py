@@ -34,8 +34,8 @@ class Schedule:
                 # Create recurring task
                 return RecurringTask(task_name, task_type, start_time, duration, start_date, end_date, frequency)
             case _:
-                print(task_type)
                 raise InvalidTaskException()
+
     @staticmethod
     def create_task_from_json(json_string: str) -> Task:
         """
@@ -277,8 +277,7 @@ class Schedule:
         # No overlap found!
         # A non-overlapping AntiTask is not allowed
         if type(new_task) is AntiTask:
-            raise InvalidTaskException("Non-overlapping antitask")
-            return False
+            raise InvalidTaskException()
         # All other tasks have no overlap is allowed
         else:
             return True
